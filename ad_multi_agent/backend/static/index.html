@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineAI | Agentic Assistant Director & Production War Room</title>
+  <meta name="description" content="Agentic Assistant Director orchestrating multi-department production feasibility and AI replanning grounded in Postgres facts.">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <!-- Header: Production Slate Bar -->
+  <header class="production-header" id="productionHeader">
+    <div class="header-left">
+      <div class="clapper-icon" id="clapperIcon">🎬</div>
+      <div class="brand-info">
+        <div class="brand-title-wrap">
+          <h1 class="brand-title">CineAI</h1>
+          <span class="brand-badge">AGENTIC AD v2.5</span>
+        </div>
+        <div class="production-tag">CHRONICLES OF CHENNAI &bull; PROD ROLL #789</div>
+      </div>
+    </div>
+
+    <!-- Live SMPTE Timecode -->
+    <div class="timecode-container" id="timecodeDisplay" title="Production Timecode Clock">
+      <span class="tc-label">SMPTE TIMECODE</span>
+      <div class="tc-value">
+        <span id="tcHours">00</span>:<span id="tcMinutes">17</span>:<span id="tcSeconds">45</span>:<span id="tcFrames">00</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="production-status-pill" id="globalStatusPill">
+        <span class="status-dot"></span>
+        <span class="status-text" id="globalStatusText">SYSTEM READY</span>
+      </div>
+      <button class="icon-btn" id="toggleTerminalBtn" title="Toggle Agent Telemetry Terminal">
+        <span class="terminal-icon">&gt;_</span>
+        <span class="btn-text">Agent Telemetry</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Quick Demo Preset Bar -->
+  <section class="demo-preset-bar" aria-label="Demo Presets">
+    <div class="preset-label">
+      <span class="pulse-icon">⚡</span>
+      <span>DEMO SCENES:</span>
+    </div>
+    <div class="preset-buttons" id="demoPresetsContainer">
+      <button class="preset-btn active" data-scene="SC01" id="presetSC01">
+        <span class="preset-id">SC01</span>
+        <span class="preset-name">Beach Meet</span>
+        <span class="preset-tag ready">All READY</span>
+      </button>
+      <button class="preset-btn" data-scene="SC03" id="presetSC03">
+        <span class="preset-id">SC03</span>
+        <span class="preset-name">Boss Office</span>
+        <span class="preset-tag warning">Camera BLOCKED</span>
+      </button>
+      <button class="preset-btn" data-scene="SC05" id="presetSC05">
+        <span class="preset-id">SC05</span>
+        <span class="preset-name">Interrogation</span>
+        <span class="preset-tag warning">Cast BLOCKED</span>
+      </button>
+      <button class="preset-btn" data-scene="SC08" id="presetSC08">
+        <span class="preset-id">SC08</span>
+        <span class="preset-name">Warehouse Fight</span>
+        <span class="preset-tag danger">Stunt BLOCKED</span>
+      </button>
+      <button class="preset-btn" data-scene="SC10" id="presetSC10">
+        <span class="preset-id">SC10</span>
+        <span class="preset-name">Train Departure</span>
+        <span class="preset-tag danger">Location BLOCKED</span>
+      </button>
+      <button class="preset-btn" data-scene="SC13" id="presetSC13">
+        <span class="preset-id">SC13</span>
+        <span class="preset-name">Rainy Street</span>
+        <span class="preset-tag weather">Weather BLOCKED</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- Main Layout -->
+  <main class="main-container">
+    <!-- Left Column: Scene Control & Context -->
+    <aside class="left-sidebar" id="sceneSidebar">
+      <div class="sidebar-card">
+        <div class="card-header">
+          <span class="card-icon">🎯</span>
+          <h2 class="card-title">Scene Selector</h2>
+        </div>
+
+        <div class="form-group">
+          <label for="sceneSelect" class="form-label">SELECT SCENE FROM PRODUCTION DB</label>
+          <div class="select-wrapper">
+            <select id="sceneSelect" class="form-select">
+              <option value="SC01">SC01 - Beach Meet & Car Arrival (Marina Beach)</option>
+              <option value="SC02">SC02 - Apartment Introduction (Apartment Set)</option>
+              <option value="SC03">SC03 - Boss Office Meeting (Office Set)</option>
+              <option value="SC04">SC04 - Old City Street Chase (Old City Market)</option>
+              <option value="SC05">SC05 - Inspector Interrogation (Interrogation Room)</option>
+              <option value="SC08">SC08 - Warehouse Fight (Abandoned Warehouse)</option>
+              <option value="SC10">SC10 - Train Departure (Central Station)</option>
+              <option value="SC13">SC13 - Rainy Street Goodbye (City Street Rain Rig)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">EXECUTION ENGINE</label>
+          <div class="mode-toggle-group">
+            <button type="button" class="mode-toggle-btn active" id="modeFastBtn" data-mode="fast">
+              <span class="mode-icon">⚡</span>
+              <span class="mode-title">Instant DB Check</span>
+              <span class="mode-sub">&lt;50ms Ground Truth</span>
+            </button>
+            <button type="button" class="mode-toggle-btn" id="modeAgentBtn" data-mode="agent">
+              <span class="mode-icon">🤖</span>
+              <span class="mode-title">Live Vertex AI</span>
+              <span class="mode-sub">Gemini 2.5 Flash Multi-Agent</span>
+            </button>
+          </div>
+        </div>
+
+        <button id="analyzeBtn" class="primary-action-btn">
+          <span class="btn-spinner" id="btnSpinner"></span>
+          <span class="btn-icon">⚡</span>
+          <span class="btn-text">ANALYZE SCENE</span>
+        </button>
+      </div>
+
+      <!-- Scene Dossier Card -->
+      <div class="sidebar-card scene-dossier" id="sceneDossierCard">
+        <div class="card-header">
+          <span class="card-icon">📋</span>
+          <h2 class="card-title">Scene Brief</h2>
+          <span class="scene-badge" id="dossierSceneId">SC01</span>
+        </div>
+
+        <div class="dossier-body">
+          <h3 class="dossier-title" id="dossierTitle">Beach Meet & Car Arrival</h3>
+          <p class="dossier-logline" id="dossierLogline">Hero and heroine meet at sunset on a crowded beach as a car arrives.</p>
+
+          <div class="dossier-meta-grid">
+            <div class="meta-item">
+              <span class="meta-label">LOCATION</span>
+              <span class="meta-value" id="dossierLocation">Marina Beach, Chennai</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SETTING</span>
+              <span class="meta-value" id="dossierSetting">EXT &bull; SUNSET</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">SHOOT DATE</span>
+              <span class="meta-value" id="dossierDate">2026-09-10 &bull; 17:45</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">STUNT LEVEL</span>
+              <span class="meta-value" id="dossierStunt">NONE</span>
+            </div>
+            <div class="meta-item full-width">
+              <span class="meta-label">CHARACTERS</span>
+              <span class="meta-value" id="dossierCharacters">Hero, Heroine, Villain</span>
+            </div>
+            <div class="meta-item full-width">
+              <span class="meta-label">KEY ELEMENTS</span>
+              <span class="meta-value" id="dossierElements">Dialogue, crowd control, car, golden hour weather dependency.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Stage: Multi-Agent Pipeline & Department Assessment -->
+    <section class="center-content">
+      <!-- Agentic Workflow Visualizer Graph -->
+      <div class="panel-card workflow-graph-card">
+        <div class="panel-header">
+          <div class="panel-title-wrap">
+            <span class="panel-icon">🧬</span>
+            <h2 class="panel-title">Multi-Agent Orchestration Pipeline</h2>
+          </div>
+          <div class="pipeline-badge" id="pipelineStatusBadge">READY TO EXECUTE</div>
+        </div>
+
+        <div class="workflow-graph">
+          <!-- Root Orchestrator -->
+          <div class="workflow-node root-node" id="nodeRoot">
+            <div class="node-icon">🎬</div>
+            <div class="node-content">
+              <span class="node-role">ORCHESTRATOR</span>
+              <span class="node-name">ad_multi_agent</span>
+            </div>
+            <div class="node-status-indicator"></div>
+          </div>
+
+          <div class="workflow-connector">
+            <div class="connector-line"></div>
+            <div class="connector-pulse"></div>
+          </div>
+
+          <!-- Production Workflow Parallel Branch -->
+          <div class="workflow-parallel-box" id="nodeParallelBox">
+            <div class="parallel-header">
+              <span>PARALLEL DEPARTMENT CHECKS</span>
+              <span class="parallel-counter" id="parallelCounter">5 DEPARTMENTS</span>
+            </div>
+            <div class="parallel-nodes">
+              <div class="mini-node" id="nodeWeather">
+                <span class="mini-icon">🌤️</span>
+                <span class="mini-name">Weather</span>
+                <span class="mini-badge">IDLE</span>
+              </div>
+              <div class="mini-node" id="nodeLocation">
+                <span class="mini-icon">📍</span>
+                <span class="mini-name">Location</span>
+                <span class="mini-badge">IDLE</span>
+              </div>
+              <div class="mini-node" id="nodeCamera">
+                <span class="mini-icon">🎥</span>
+                <span class="mini-name">Camera</span>
+                <span class="mini-badge">IDLE</span>
+              </div>
+              <div class="mini-node" id="nodeStunt">
+                <span class="mini-icon">💥</span>
+                <span class="mini-name">Stunt</span>
+                <span class="mini-badge">IDLE</span>
+              </div>
+              <div class="mini-node" id="nodeCast">
+                <span class="mini-icon">👥</span>
+                <span class="mini-name">Cast</span>
+                <span class="mini-badge">IDLE</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="workflow-connector">
+            <div class="connector-line"></div>
+            <div class="connector-pulse"></div>
+          </div>
+
+          <!-- Replan Agent Node -->
+          <div class="workflow-node replan-node" id="nodeReplan">
+            <div class="node-icon">🔄</div>
+            <div class="node-content">
+              <span class="node-role">CONTINGENCY</span>
+              <span class="node-name">replan_agent</span>
+            </div>
+            <div class="node-status-indicator"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendation & Replan Panel (Dynamic on Blockers) -->
+      <div class="replan-container hidden" id="replanContainer">
+        <div class="replan-banner danger">
+          <div class="replan-banner-left">
+            <span class="alert-icon">⚠️</span>
+            <div>
+              <h3 class="replan-banner-title">PRODUCTION BLOCKER DETECTED — REPLAN ACTIVE</h3>
+              <p class="replan-banner-desc" id="replanAlertDesc">Department checks flagged 1 or more blockers. Assistant Director AI has computed alternative production schedules.</p>
+            </div>
+          </div>
+          <div class="failed-tags-list" id="failedDeptsBadges">
+            <span class="dept-fail-tag">Camera BLOCKED</span>
+          </div>
+        </div>
+
+        <div class="replan-content-grid">
+          <!-- Replan Strategy Card -->
+          <div class="replan-strategy-card">
+            <div class="card-subhead">
+              <span>🎯</span>
+              <h4>Assistant Director Search Strategy</h4>
+            </div>
+            <p class="strategy-text" id="replanStrategyText">Prioritized READY scenes from production DB, favoring interior dialogue-driven scenes with compatible equipment setups as direct schedule swaps.</p>
+          </div>
+
+          <!-- Recommended Alternative Options -->
+          <div class="replan-alternatives-list" id="replanAlternativesList">
+            <!-- Dynamically populated alternative scene cards -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Department Inspection Cards Grid -->
+      <div class="department-grid-section">
+        <div class="section-header">
+          <div class="section-title-wrap">
+            <span class="section-icon">📊</span>
+            <h3 class="section-title">Department Readiness Checks</h3>
+          </div>
+          <span class="section-subtitle">Grounded in Postgres facts: permits, inventory, schedules & safety logs</span>
+        </div>
+
+        <div class="departments-grid" id="departmentsGrid">
+          <!-- 1. Weather Department Card -->
+          <div class="dept-card" id="cardWeather" data-dept="weather">
+            <div class="dept-card-header">
+              <div class="dept-title-group">
+                <span class="dept-icon">🌤️</span>
+                <div>
+                  <h4 class="dept-title">Weather Department</h4>
+                  <span class="dept-sub">weather_agent</span>
+                </div>
+              </div>
+              <div class="dept-status-badge ready" id="weatherBadge">READY</div>
+            </div>
+            <div class="dept-card-body">
+              <p class="dept-reason" id="weatherReason">Weather reading is within required thresholds.</p>
+              <div class="dept-metrics">
+                <div class="metric-box">
+                  <span class="metric-title">RAIN PROB</span>
+                  <div class="metric-bar-wrap">
+                    <div class="metric-bar" id="rainBar" style="width: 10%;"></div>
+                  </div>
+                  <span class="metric-val" id="rainVal">10% / Max 30%</span>
+                </div>
+                <div class="metric-box">
+                  <span class="metric-title">WIND SPEED</span>
+                  <div class="metric-bar-wrap">
+                    <div class="metric-bar" id="windBar" style="width: 40%;"></div>
+                  </div>
+                  <span class="metric-val" id="windVal">10 km/h / Max 25</span>
+                </div>
+              </div>
+              <div class="dept-conditions" id="weatherConditions">
+                <span class="cond-tag">Visibility: 10km</span>
+                <span class="cond-tag">Golden Hour Window</span>
+              </div>
+            </div>
+            <div class="dept-card-footer">
+              <button class="json-toggle-btn" data-target="weatherJson">
+                <span>View Agent JSON</span>
+                <span class="chevron">▼</span>
+              </button>
+            </div>
+            <div class="dept-json-drawer" id="weatherJson">
+              <pre class="json-code" id="weatherJsonCode"></pre>
+            </div>
+          </div>
+
+          <!-- 2. Location Department Card -->
+          <div class="dept-card" id="cardLocation" data-dept="location">
+            <div class="dept-card-header">
+              <div class="dept-title-group">
+                <span class="dept-icon">📍</span>
+                <div>
+                  <h4 class="dept-title">Location & Permits</h4>
+                  <span class="dept-sub">location_agent</span>
+                </div>
+              </div>
+              <div class="dept-status-badge ready" id="locationBadge">READY</div>
+            </div>
+            <div class="dept-card-body">
+              <p class="dept-reason" id="locationReason">Location 'Marina Beach' is feasible.</p>
+              <div class="permit-info-box">
+                <div class="permit-row">
+                  <span class="permit-label">PERMIT STATUS</span>
+                  <span class="permit-value approved" id="permitStatus">APPROVED</span>
+                </div>
+                <div class="permit-row">
+                  <span class="permit-label">OPERATING HOURS</span>
+                  <span class="permit-value" id="operatingHours">06:00 - 22:00</span>
+                </div>
+                <div class="permit-row">
+                  <span class="permit-label">CONSTRAINTS</span>
+                  <span class="permit-value" id="accessConstraints">Crowd control required</span>
+                </div>
+              </div>
+            </div>
+            <div class="dept-card-footer">
+              <button class="json-toggle-btn" data-target="locationJson">
+                <span>View Agent JSON</span>
+                <span class="chevron">▼</span>
+              </button>
+            </div>
+            <div class="dept-json-drawer" id="locationJson">
+              <pre class="json-code" id="locationJsonCode"></pre>
+            </div>
+          </div>
+
+          <!-- 3. Camera Department Card -->
+          <div class="dept-card" id="cardCamera" data-dept="camera">
+            <div class="dept-card-header">
+              <div class="dept-title-group">
+                <span class="dept-icon">🎥</span>
+                <div>
+                  <h4 class="dept-title">Camera & Gear</h4>
+                  <span class="dept-sub">camera_agent</span>
+                </div>
+              </div>
+              <div class="dept-status-badge ready" id="cameraBadge">READY</div>
+            </div>
+            <div class="dept-card-body">
+              <p class="dept-reason" id="cameraReason">All planned cameras are available.</p>
+              <div class="camera-list" id="cameraList">
+                <div class="gear-chip available">
+                  <span class="gear-id">CAM001</span>
+                  <span class="gear-status">AVAILABLE</span>
+                </div>
+                <div class="gear-chip available">
+                  <span class="gear-id">CAM002</span>
+                  <span class="gear-status">AVAILABLE</span>
+                </div>
+                <div class="gear-chip available">
+                  <span class="gear-id">CAM004</span>
+                  <span class="gear-status">AVAILABLE</span>
+                </div>
+              </div>
+              <p class="gear-notes" id="cameraNotes">Setup CS01: 3-camera + drone for beach meet and car arrival.</p>
+            </div>
+            <div class="dept-card-footer">
+              <button class="json-toggle-btn" data-target="cameraJson">
+                <span>View Agent JSON</span>
+                <span class="chevron">▼</span>
+              </button>
+            </div>
+            <div class="dept-json-drawer" id="cameraJson">
+              <pre class="json-code" id="cameraJsonCode"></pre>
+            </div>
+          </div>
+
+          <!-- 4. Stunt Department Card -->
+          <div class="dept-card" id="cardStunt" data-dept="stunt">
+            <div class="dept-card-header">
+              <div class="dept-title-group">
+                <span class="dept-icon">💥</span>
+                <div>
+                  <h4 class="dept-title">Stunt & Safety</h4>
+                  <span class="dept-sub">stunt_agent</span>
+                </div>
+              </div>
+              <div class="dept-status-badge ready" id="stuntBadge">READY</div>
+            </div>
+            <div class="dept-card-body">
+              <p class="dept-reason" id="stuntReason">No stunt requirements for this scene.</p>
+              <div class="stunt-checklist" id="stuntChecklist">
+                <div class="checklist-item checked">
+                  <span class="check-icon">✓</span>
+                  <span>Stunt Level: NONE</span>
+                </div>
+                <div class="checklist-item checked">
+                  <span class="check-icon">✓</span>
+                  <span>Safety clearance confirmed</span>
+                </div>
+              </div>
+            </div>
+            <div class="dept-card-footer">
+              <button class="json-toggle-btn" data-target="stuntJson">
+                <span>View Agent JSON</span>
+                <span class="chevron">▼</span>
+              </button>
+            </div>
+            <div class="dept-json-drawer" id="stuntJson">
+              <pre class="json-code" id="stuntJsonCode"></pre>
+            </div>
+          </div>
+
+          <!-- 5. Cast Department Card -->
+          <div class="dept-card" id="cardCast" data-dept="cast">
+            <div class="dept-card-header">
+              <div class="dept-title-group">
+                <span class="dept-icon">👥</span>
+                <div>
+                  <h4 class="dept-title">Cast Department</h4>
+                  <span class="dept-sub">cast_agent</span>
+                </div>
+              </div>
+              <div class="dept-status-badge ready" id="castBadge">READY</div>
+            </div>
+            <div class="dept-card-body">
+              <p class="dept-reason" id="castReason">All mapped cast members are available.</p>
+              <div class="cast-roster" id="castRoster">
+                <div class="cast-row available">
+                  <div class="cast-avatar">AR</div>
+                  <div class="cast-details">
+                    <span class="cast-name">Arjun Rao (CAST001)</span>
+                    <span class="cast-role">Hero &bull; Call Sheet #1</span>
+                  </div>
+                  <span class="cast-avail-badge">FULL DAY</span>
+                </div>
+                <div class="cast-row available">
+                  <div class="cast-avatar">MN</div>
+                  <div class="cast-details">
+                    <span class="cast-name">Meera Nair (CAST002)</span>
+                    <span class="cast-role">Heroine &bull; Call Sheet #2</span>
+                  </div>
+                  <span class="cast-avail-badge">FULL DAY</span>
+                </div>
+                <div class="cast-row available">
+                  <div class="cast-avatar">RM</div>
+                  <div class="cast-details">
+                    <span class="cast-name">Rahul Menon (CAST003)</span>
+                    <span class="cast-role">Villain &bull; Call Sheet #3</span>
+                  </div>
+                  <span class="cast-avail-badge">FULL DAY</span>
+                </div>
+              </div>
+            </div>
+            <div class="dept-card-footer">
+              <button class="json-toggle-btn" data-target="castJson">
+                <span>View Agent JSON</span>
+                <span class="chevron">▼</span>
+              </button>
+            </div>
+            <div class="dept-json-drawer" id="castJson">
+              <pre class="json-code" id="castJsonCode"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Drawer: Live Agent Telemetry & Reasoning Console -->
+    <aside class="right-drawer closed" id="agentTelemetryDrawer">
+      <div class="drawer-header">
+        <div class="drawer-title-wrap">
+          <span class="terminal-icon">&gt;_</span>
+          <h3 class="drawer-title">Live Agent Telemetry</h3>
+        </div>
+        <button class="close-drawer-btn" id="closeDrawerBtn" title="Close Drawer">&times;</button>
+      </div>
+      <div class="terminal-feed" id="terminalFeed">
+        <div class="term-entry system">
+          <span class="term-time">[00:00:00]</span>
+          <span class="term-author">[SYSTEM]</span>
+          <span class="term-text">CineAI Production War Room online. Connected to PostgreSQL localhost:5432 (film_ad).</span>
+        </div>
+      </div>
+      <div class="drawer-footer">
+        <button class="export-report-btn" id="exportReportBtn">
+          <span>📋 Copy AD Production Brief</span>
+        </button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Notification Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Scripts -->
+  <script src="/app.js"></script>
+</body>
+</html>

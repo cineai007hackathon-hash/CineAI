@@ -50,7 +50,20 @@ GOOGLE_CLOUD_LOCATION=global
 MODEL_NAME=gemini-2.5-flash
 ```
 
-## 3. Run ADK Web
+## 3. Run CineAI Production War Room (Recommended)
+
+Start the full CineAI Assistant Director dashboard & API server:
+
+```bash
+cd backend
+PORT=8088 uv run python server.py
+```
+
+Open your browser and go to **`http://localhost:8088/`**.
+
+## 4. Run ADK Web / CLI
+
+Alternatively, run via the Google ADK CLI:
 
 ```bash
 cd backend
@@ -74,3 +87,4 @@ Open the UI, select the **agents** app, then try:
 | SC08 | Stunt BLOCKED |
 | SC10 | Location BLOCKED |
 | SC13 | Weather BLOCKED |
+
