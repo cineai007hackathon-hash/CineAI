@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "location": {
+      "command": "uvx",
+      "args": ["geocode-mcp"],
+      "env": { "FASTMCP_LOG_LEVEL": "INFO" },
+      "disabled": false,
+      "autoApprove": [
+        "mcp_geocoding_get_coordinates",
+        "geocode_location",
+        "reverse_geocode"
+      ]
+    }
+  }
+}

@@ -4,7 +4,16 @@ from pydantic import BaseModel, Field
 
 from google.adk.agents import Agent, BaseAgent, ParallelAgent
 from google.adk.agents.invocation_context import InvocationContext
+from google.adk.tools.mcp_tool import McpToolset
+
 from .prompts.root_agent_prompt import ROOT_AGENT_INSTRUCTION
+from .prompts.weather_agent_prompt import WEATHER_AGENT_INSTRUCTION
+from .prompts.location_agent_prompt import LOCATION_AGENT_INSTRUCTION
+
+from .mcp.weather_mcp import get_weather_mcp_toolset
+from .mcp.location_mcp import get_location_mcp_toolset
+from .mcp.docling_rag_mcp import get_docling_mcp_toolset, get_watsonx_dl_retrieval_mcp
+
 
 
 class DepartmentResult(BaseModel):
@@ -68,28 +77,20 @@ weather_agent = Agent(
     name="weather_agent",
     model="gemini-2.5-flash",
     description="Checks weather and environmental feasibility for a scene.",
-    instruction=(
-        "Inspect the structured scene brief. Return JSON matching the output schema. "
-        "Set is_weather_fine to true only when the scene's weather and environmental "
-        "requirements are feasible; otherwise set it to false. Never invent a forecast."
-    ),
+    instruction=WEATHER_AGENT_INSTRUCTION,
     output_schema=WeatherResult,
     output_key="weather_result",
-    tools=[],
+    tools=[get_weather_mcp_toolset()],
 )
 
 location_agent = Agent(
     name="location_agent",
     model="gemini-2.5-flash",
     description="Checks location, access, and permit feasibility for a scene.",
-    instruction=(
-        "Inspect the structured scene brief. Return JSON matching the output schema. "
-        "Set is_location_fine to true only when location, access, and permit details "
-        "are explicitly feasible; otherwise set it to false. Flag missing information."
-    ),
+    instruction=LOCATION_AGENT_INSTRUCTION,
     output_schema=LocationResult,
     output_key="location_result",
-    tools=[],
+    tools=[get_location_mcp_toolset()],
 )
 
 camera_agent = Agent(
@@ -224,6 +225,11 @@ def _read_boolean(result: object, key: str) -> bool:
 production_workflow = ProductionWorkflow()
 
 
+root_tools = [get_docling_mcp_toolset()]
+watsonx_tool = get_watsonx_dl_retrieval_mcp()
+if watsonx_tool:
+    root_tools.append(watsonx_tool)
+
 root_agent = Agent(
     name="ad_multi_agent",
     model="gemini-2.5-flash",
@@ -233,5 +239,5 @@ root_agent = Agent(
     ),
     instruction=ROOT_AGENT_INSTRUCTION,
     sub_agents=[production_workflow],
-    tools=[],
+    tools=root_tools,
 )
