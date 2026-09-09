@@ -1,25 +1,16 @@
 # Core agent framework
-google-adk>=1.0.0
-mcp>=1.0.0
+google-adk>=2.8.0
+mcp>=1.24,<2
 
 # Settings & validation
 pydantic>=2.7
 pydantic-settings>=2.3
 
-# Data tools (Excel → later Postgres)
+# Data / DB
 pandas>=2.2
 openpyxl>=3.1
-numpy>=1.26
-
-# PostgreSQL
-asyncpg>=0.29
 psycopg2-binary>=2.9
-sqlalchemy[asyncio]>=2.0
 
 # HTTP / utilities
 httpx>=0.27
 python-dotenv>=1.0
-tenacity>=8.3
-
-# Optional (only when WATSONX_DL_ENABLED=true)
-# ibm-watsonxdata-dl-retrieval-mcp-server

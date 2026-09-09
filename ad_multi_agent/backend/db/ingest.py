@@ -29,7 +29,8 @@ DB_NAME = os.getenv("POSTGRES_DB", "film_ad")
 DB_USER = os.getenv("POSTGRES_USER", "film_ad_user")
 DB_PASS = os.getenv("POSTGRES_PASSWORD", "film_ad_pass")
 
-DATASET_PATH = os.getenv("DATASET_PATH", "film_ad_dataset_v4.xlsx")
+_DEFAULT_DATASET = os.path.join(os.path.dirname(__file__), "film_ad_dataset_v4.xlsx")
+DATASET_PATH = os.getenv("DATASET_PATH", _DEFAULT_DATASET)
 
 CONN_KWARGS = dict(host=DB_HOST, port=DB_PORT, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
 

@@ -1,19 +1,35 @@
+"""Film AD multi-agent system — ADK root + department workflow."""
+
+from __future__ import annotations
+
 from collections.abc import AsyncGenerator
 
 from pydantic import BaseModel, Field
 
 from google.adk.agents import Agent, BaseAgent, ParallelAgent
 from google.adk.agents.invocation_context import InvocationContext
-from google.adk.tools.mcp_tool import McpToolset
 
-from .prompts.root_agent_prompt import ROOT_AGENT_INSTRUCTION
-from .prompts.weather_agent_prompt import WEATHER_AGENT_INSTRUCTION
+from . import env_bootstrap  # noqa: F401  — load .env into os.environ first
+from .config.settings import settings
+from .prompts.camera_agent_prompt import CAMERA_AGENT_INSTRUCTION
+from .prompts.cast_agent_prompt import CAST_AGENT_INSTRUCTION
 from .prompts.location_agent_prompt import LOCATION_AGENT_INSTRUCTION
+from .prompts.replan_agent_prompt import REPLAN_AGENT_INSTRUCTION
+from .prompts.root_agent_prompt import ROOT_AGENT_INSTRUCTION
+from .prompts.stunt_agent_prompt import STUNT_AGENT_INSTRUCTION
+from .prompts.weather_agent_prompt import WEATHER_AGENT_INSTRUCTION
+from .tools.db_tools import (
+    check_camera_for_scene,
+    check_cast_for_scene,
+    check_location_for_scene,
+    check_stunt_for_scene,
+    check_weather_for_scene,
+    find_scenes,
+    get_scene_bundle,
+    list_candidate_scenes_for_replan,
+)
 
-from .mcp.weather_mcp import get_weather_mcp_toolset
-from .mcp.location_mcp import get_location_mcp_toolset
-from .mcp.docling_rag_mcp import get_docling_mcp_toolset, get_watsonx_dl_retrieval_mcp
-
+MODEL = settings.model_name
 
 
 class DepartmentResult(BaseModel):
@@ -73,85 +89,83 @@ class ReplanResult(BaseModel):
     alternatives: list[ReplanOption] = Field(default_factory=list)
     metadata_updates: dict[str, object] = Field(default_factory=dict)
 
+
+def _weather_tools() -> list:
+    tools: list = [check_weather_for_scene]
+    if settings.use_live_weather_mcp:
+        from .mcp.weather_mcp import get_weather_mcp_toolset
+
+        tools.append(get_weather_mcp_toolset())
+    return tools
+
+
+def _location_tools() -> list:
+    tools: list = [check_location_for_scene, get_scene_bundle]
+    if settings.use_live_location_mcp:
+        from .mcp.location_mcp import get_location_mcp_toolset
+
+        tools.append(get_location_mcp_toolset())
+    return tools
+
+
 weather_agent = Agent(
     name="weather_agent",
-    model="gemini-2.5-flash",
-    description="Checks weather and environmental feasibility for a scene.",
+    model=MODEL,
+    description="Checks weather feasibility for a scene using the production DB.",
     instruction=WEATHER_AGENT_INSTRUCTION,
     output_schema=WeatherResult,
     output_key="weather_result",
-    tools=[get_weather_mcp_toolset()],
+    tools=_weather_tools(),
 )
 
 location_agent = Agent(
     name="location_agent",
-    model="gemini-2.5-flash",
-    description="Checks location, access, and permit feasibility for a scene.",
+    model=MODEL,
+    description="Checks location/permit feasibility for a scene using the production DB.",
     instruction=LOCATION_AGENT_INSTRUCTION,
     output_schema=LocationResult,
     output_key="location_result",
-    tools=[get_location_mcp_toolset()],
+    tools=_location_tools(),
 )
 
 camera_agent = Agent(
     name="camera_agent",
-    model="gemini-2.5-flash",
-    description="Checks camera inventory and creates camera preparation tasks for a scene.",
-    instruction=(
-        "Inspect the scene brief and return only JSON matching the output schema. "
-        "Check camera requirements and report the camera_id, camera_status, missing_items, "
-        "and expected_items. Set ready_for_shooting true only when camera needs are met."
-    ),
+    model=MODEL,
+    description="Checks camera inventory/schedule readiness for a scene from the DB.",
+    instruction=CAMERA_AGENT_INSTRUCTION,
     output_schema=CameraResult,
     output_key="camera_result",
-    tools=[],
+    tools=[check_camera_for_scene, get_scene_bundle],
 )
 
 stunt_agent = Agent(
     name="stunt_agent",
-    model="gemini-2.5-flash",
-    description="Checks stunt safety requirements and readiness for a scene.",
-    instruction=(
-        "Inspect the scene brief and return only JSON matching the output schema. "
-        "Report stunt_id, stunt_status, safety requirements, missing items, and blockers. "
-        "Set ready_for_shooting true only when the stunt department is ready."
-    ),
+    model=MODEL,
+    description="Checks stunt safety checklist readiness for a scene from the DB.",
+    instruction=STUNT_AGENT_INSTRUCTION,
     output_schema=StuntResult,
     output_key="stunt_result",
-    tools=[],
+    tools=[check_stunt_for_scene, get_scene_bundle],
 )
 
 cast_agent = Agent(
     name="cast_agent",
-    model="gemini-2.5-flash",
-    description="Checks cast availability and creates cast preparation tasks for a scene.",
-    instruction=(
-        "Inspect the scene brief and return only JSON matching the output schema. "
-        "Report cast_status and cast_members_availability for every named actor. "
-        "Set ready_for_shooting true only when all required cast members are available."
-    ),
+    model=MODEL,
+    description="Checks cast availability for a scene from the production DB.",
+    instruction=CAST_AGENT_INSTRUCTION,
     output_schema=CastResult,
     output_key="cast_result",
-    tools=[],
+    tools=[check_cast_for_scene, get_scene_bundle],
 )
-
 
 replan_agent = Agent(
     name="replan_agent",
-    model="gemini-2.5-flash",
-    description="Finds alternative scenes or schedules when a department is not ready.",
-    instruction=(
-        "Read the five department JSON results from session state: weather_result, "
-        "location_result, camera_result, stunt_result, and cast_result. Identify every "
-        "department whose ready_for_shooting is false. Recommend the next possible scene "
-        "or schedule alternative using database/search tools when available. For location_id "
-        "and camera_id, use direct lookup or combinational search. Return only JSON matching "
-        "the output schema, with scores and probabilities between 0 and 1. Include metadata "
-        "updates so department results can be changed later without losing their history."
-    ),
+    model=MODEL,
+    description="Finds alternative scenes/schedules when a department check fails.",
+    instruction=REPLAN_AGENT_INSTRUCTION,
     output_schema=ReplanResult,
     output_key="replan_result",
-    tools=[],
+    tools=[list_candidate_scenes_for_replan, get_scene_bundle, find_scenes],
 )
 
 
@@ -173,7 +187,8 @@ class ProductionWorkflow(BaseAgent):
         super().__init__(
             name="production_workflow",
             description=(
-                "Runs five parallel department checks and invokes replanning for failures."
+                "Runs five parallel department DB checks and invokes replanning "
+                "when any department is not ready."
             ),
             sub_agents=[department_checks, replan_agent],
             **kwargs,
@@ -198,19 +213,20 @@ class ProductionWorkflow(BaseAgent):
             "stunt_result",
             "cast_result",
         )
-        results = {key: ctx.state.get(key, {}) for key in result_keys}
+        session_state = ctx.session.state
+        results = {key: session_state.get(key, {}) for key in result_keys}
         failed_departments = [
             result.get("department", key.removesuffix("_result"))
             for key, result in results.items()
             if not _read_boolean(result, "ready_for_shooting")
         ]
-        ctx.state["failed_departments"] = failed_departments
-        ctx.state["all_departments_ready"] = not failed_departments
-        ctx.state["agent_metadata"] = {
+        session_state["failed_departments"] = failed_departments
+        session_state["all_departments_ready"] = not failed_departments
+        session_state["agent_metadata"] = {
             key: result.get("metadata", {}) for key, result in results.items()
         }
 
-        if failed_departments:
+        if failed_departments and settings.enable_replan_on_failure:
             async for event in self.replan.run_async(ctx):
                 yield event
 
@@ -225,19 +241,27 @@ def _read_boolean(result: object, key: str) -> bool:
 production_workflow = ProductionWorkflow()
 
 
-root_tools = [get_docling_mcp_toolset()]
-watsonx_tool = get_watsonx_dl_retrieval_mcp()
-if watsonx_tool:
-    root_tools.append(watsonx_tool)
+def _root_tools() -> list:
+    tools: list = [get_scene_bundle, find_scenes]
+    if settings.use_docling_mcp:
+        from .mcp.docling_rag_mcp import get_docling_mcp_toolset, get_watsonx_dl_retrieval_mcp
+
+        tools.append(get_docling_mcp_toolset())
+        if settings.use_watsonx_rag:
+            watsonx_tool = get_watsonx_dl_retrieval_mcp()
+            if watsonx_tool:
+                tools.append(watsonx_tool)
+    return tools
+
 
 root_agent = Agent(
     name="ad_multi_agent",
-    model="gemini-2.5-flash",
+    model=MODEL,
     description=(
-        "Assistant Director orchestrator that turns a screenplay scene into a "
-        "structured production brief and coordinates the relevant department agents."
+        "Assistant Director orchestrator that resolves a scene from the production "
+        "DB and coordinates weather, location, camera, stunt, and cast agents."
     ),
     instruction=ROOT_AGENT_INSTRUCTION,
     sub_agents=[production_workflow],
-    tools=root_tools,
+    tools=_root_tools(),
 )
