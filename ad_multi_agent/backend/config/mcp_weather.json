@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "weather": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/agentic-forge/mcp-weather.git",
+        "python", "-m", "forge_mcp_weather"
+      ],
+      "env": { "FASTMCP_LOG_LEVEL": "INFO" },
+      "disabled": false,
+      "autoApprove": ["get_current_weather", "get_forecast", "geocode"]
+    }
+  }
+}

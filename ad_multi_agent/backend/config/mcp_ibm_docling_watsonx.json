@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "docling": {
+      "command": "uvx",
+      "args": ["--from", "docling-mcp", "docling-mcp-server"],
+      "env": {
+        "DOCLING_MCP_LOG_LEVEL": "INFO",
+        "DOCLING_CONVERSION_MODE": "local",
+        "DOCLING_FALLBACK_TO_LOCAL": "true"
+      },
+      "disabled": false
+    },
+    "watsonx-dl-retrieval": {
+      "command": "uv",
+      "args": ["run", "ibm-watsonxdata-dl-retrieval-mcp-server", "--transport", "stdio"],
+      "env": {
+        "WATSONX_DATA_API_KEY": "${WATSONX_DATA_API_KEY}",
+        "WATSONX_DATA_RETRIEVAL_ENDPOINT": "${WATSONX_DATA_RETRIEVAL_ENDPOINT}",
+        "DOCUMENT_LIBRARY_API_ENDPOINT": "${DOCUMENT_LIBRARY_API_ENDPOINT}",
+        "WATSONX_DATA_TOKEN_GENERATION_ENDPOINT": "${WATSONX_DATA_TOKEN_GENERATION_ENDPOINT}",
+        "LH_CONTEXT": "SAAS"
+      },
+      "disabled": false
+    }
+  }
+}
